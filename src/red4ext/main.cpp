@@ -1,14 +1,13 @@
-#include <RED4ext/Api/EMainReason.hpp>
-#include <RED4ext/Api/PluginHandle.hpp>
-#include <RED4ext/Api/Runtime.hpp>
-#include <RED4ext/Api/Sdk.hpp>
-#include <RED4ext/Api/SemVer.hpp>
-#include <RED4ext/Api/v0/FileVer.hpp>
-#include <RED4ext/Api/v0/Logger.hpp>
-#include <RED4ext/Api/v0/PluginInfo.hpp>
-#include <RED4ext/Api/v0/Sdk.hpp>
-#include <RED4ext/Api/v0/SemVer.hpp>
-#include <RED4ext/Api/Version.hpp>
+#include <RED4ext/Api/ApiVersion.hpp>
+#include <RED4ext/Api/v1/EMainReason.hpp>
+#include <RED4ext/Api/v1/FileVer.hpp>
+#include <RED4ext/Api/v1/Logger.hpp>
+#include <RED4ext/Api/v1/PluginHandle.hpp>
+#include <RED4ext/Api/v1/PluginInfo.hpp>
+#include <RED4ext/Api/v1/Runtime.hpp>
+#include <RED4ext/Api/v1/Sdk.hpp>
+#include <RED4ext/Api/v1/SemVer.hpp>
+#include <RED4ext/Api/v1/Version.hpp>
 #include <RED4ext/Common.hpp>
 #include <RED4ext/RTTISystem.hpp>
 #include <RED4ext/RTTITypes.hpp>
@@ -38,8 +37,8 @@ RED4ext::CClass *FovControl::GetNativeType()
 }
 
 // Used to access RED4ext services (logger, etc.).
-const RED4ext::Sdk *g_sdk = nullptr;
-RED4ext::PluginHandle g_handle = nullptr;
+const RED4ext::v1::Sdk *g_sdk = nullptr;
+RED4ext::v1::PluginHandle g_handle = nullptr;
 
 namespace
 {
@@ -51,7 +50,7 @@ namespace
         float displayFov;
     };
 
-    constexpr const char* kVersionStr = "2.31.1";
+    constexpr const char* kVersionStr = "2.50.0";
 
     // Patched (locked) pattern.
     constexpr uint8_t kPatOn[] = {
@@ -104,6 +103,7 @@ namespace
         {59.22966766f, 90.0f},
         {63.62687683f, 95.0f},
         {68.23798370f, 100.0f},
+        {69.00000000f, 101.0f}, // TPP driving default
         {73.08179474f, 105.0f},
         {78.17757416f, 110.0f},
         {83.54468536f, 115.0f},
@@ -324,6 +324,15 @@ namespace
             return inverse ? p.internalFov : p.displayFov;
         };
 
+        // Snap to table entry if input matches within tolerance.
+        constexpr float kSnapEps = 0.001f;
+        for (size_t i = 0; i < n; ++i)
+        {
+            const float d = getX(fovTable[i]) - x;
+            if (d >= -kSnapEps && d <= kSnapEps)
+                return getY(fovTable[i]);
+        }
+
         // Clamp: if outside table range, snap to edge
         const float xMin = getX(fovTable[0]);
         const float xMax = getX(fovTable[n - 1]);
@@ -443,29 +452,31 @@ namespace
 }
 
 /// RED4ext plugin entry: register types and natives on load.
-RED4EXT_C_EXPORT bool RED4EXT_CALL Main(RED4ext::PluginHandle handle, RED4ext::EMainReason reason, const RED4ext::Sdk *sdk)
+RED4EXT_C_EXPORT bool RED4EXT_CALL Main(RED4ext::v1::PluginHandle handle, RED4ext::v1::EMainReason reason, const RED4ext::v1::Sdk *sdk)
 {
-    if (reason == RED4ext::EMainReason::Load)
+    if (reason == RED4ext::v1::EMainReason::Load)
     {
         g_sdk = sdk;
         g_handle = handle;
-        RED4ext::RTTIRegistrator::Add(RegisterTypes, PostRegisterTypes);
+        auto *rtti = RED4ext::CRTTISystem::Get();
+        rtti->AddRegisterCallback(RegisterTypes);
+        rtti->AddPostRegisterCallback(PostRegisterTypes);
     }
     return true;
 }
 
 /// Provide plugin metadata to RED4ext.
-RED4EXT_C_EXPORT void RED4EXT_CALL Query(RED4ext::PluginInfo *info)
+RED4EXT_C_EXPORT void RED4EXT_CALL Query(RED4ext::v1::PluginInfo *info)
 {
     info->name = L"FovControl";
     info->author = L"Si13n7 Dev.\x99";
-    info->version = RED4EXT_SEMVER(2, 31, 0);
-    info->runtime = RED4EXT_RUNTIME_LATEST;
-    info->sdk = RED4EXT_SDK_LATEST;
+    info->version = RED4EXT_V1_SEMVER(2, 31, 0);
+    info->runtime = RED4EXT_V1_RUNTIME_VERSION_LATEST;
+    info->sdk = RED4EXT_V1_SDK_VERSION_CURRENT;
 }
 
 /// Report supported RED4ext API version.
 RED4EXT_C_EXPORT uint32_t RED4EXT_CALL Supports()
 {
-    return RED4EXT_API_VERSION_LATEST;
+    return RED4EXT_API_VERSION_1;
 }
