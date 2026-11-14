@@ -469,8 +469,8 @@ RED4EXT_C_EXPORT bool RED4EXT_CALL Main(RED4ext::v1::PluginHandle handle, RED4ex
 RED4EXT_C_EXPORT void RED4EXT_CALL Query(RED4ext::v1::PluginInfo *info)
 {
     info->name = L"FovControl";
-    info->author = L"Si13n7 Dev.\x99";
-    info->version = RED4EXT_V1_SEMVER(2, 31, 0);
+    info->author = L"koryboc";
+    info->version = RED4EXT_V1_SEMVER(2, 50, 0);
     info->runtime = RED4EXT_V1_RUNTIME_VERSION_LATEST;
     info->sdk = RED4EXT_V1_SDK_VERSION_CURRENT;
 }
